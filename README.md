@@ -120,6 +120,8 @@ if the language model fails.
 - **Sync to an Astro site.** [`astro-kit/`](astro-kit/README.md) pulls articles into
   an existing project.
 
+The source of [octypo.com](https://octypo.com) is in [`website/`](website/README.md).
+
 ## Configuration
 
 Settings live in `.env`. [`.env.example`](.env.example) lists all of them.

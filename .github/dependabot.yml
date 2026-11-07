@@ -12,6 +12,10 @@ updates:
     directory: /blog
     schedule:
       interval: weekly
+  - package-ecosystem: npm
+    directory: /website
+    schedule:
+      interval: weekly
   - package-ecosystem: github-actions
     directory: /
     schedule:
