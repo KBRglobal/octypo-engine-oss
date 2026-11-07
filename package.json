@@ -53,7 +53,7 @@
     "@anthropic-ai/sdk": "^0.71.2",
     "@aws-sdk/client-s3": "^3.1066.0",
     "@google/genai": "^1.33.0",
-    "@types/multer": "^2.1.0",
+    "@types/multer": "^2.3.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.4",
     "express": "^5.3.0",
