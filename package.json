@@ -1,7 +1,7 @@
 {
   "name": "octypo",
   "version": "1.0.0",
-  "description": "Autonomous content engine: turns feeds into fact-checked articles in any language.",
+  "description": "Autonomous content engine: turns feeds into source-checked articles in any language.",
   "type": "module",
   "license": "MIT",
   "repository": {

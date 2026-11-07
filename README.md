@@ -1,7 +1,7 @@
 # Octypo
 
-**A self-hosted engine that turns feeds and your own documents into fact-checked
-articles, in any language.**
+**A self-hosted engine that turns feeds and your own documents into articles checked
+against their sources, in any language.**
 
 ```bash
 npm install -g octypo
