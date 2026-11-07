@@ -1,123 +1,159 @@
-# Octypo — Autonomous Content Engine
+# Octypo
 
-Point it at RSS feeds. It selects what's worth writing about, writes full articles
-with specialized AI writer personas, fact-gates the result, and publishes — fully
-autonomously, in **your** content domain.
+**A self-hosted engine that turns feeds and your own documents into fact-checked
+articles, in any language.**
 
-```
-RSS feeds ──► Gate 1 (LLM selection)──► Writer agents ──► Gate 2 (LLM approval) ──► Published article
-                 │  scoring: SEO 40% /       │  8 personas,        │  quality + AEO        │  status=published
-                 │  AEO 35% / Virality 25%   │  multi-model        │  review, revise        │  + JSON-LD schema
-                 │  + MinHash/LSH dedup      │  fallback chain     │  loop (max 2)          │  + IndexNow ping
-                 ▼                           ▼                     ▼                        ▼
-               skip / queue              in_review              reject / revise          GET /api/articles
-```
+[![CI](https://github.com/KBRglobal/octypo-engine-oss/actions/workflows/ci.yml/badge.svg)](https://github.com/KBRglobal/octypo-engine-oss/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node 20+](https://img.shields.io/badge/node-20%2B-brightgreen.svg)](https://nodejs.org)
 
-## What's inside
+![The Octypo admin panel](docs/images/overview.webp)
 
-- **Gate 1 selector** — scores every feed item (SEO / AEO / virality), tiers it S1–S3, dedupes with MinHash + LSH fingerprints, and assigns the best writer persona. Falls back to heuristics when no LLM is reachable.
-- **Writer agents** — 8 domain-neutral personas (News Reporter, Analyst, How-To Writer, Reviewer, Trends Writer, Storyteller, Listicle Writer, Deep-Dive Researcher) producing structured JSON articles with answer capsules, FAQs and meta fields.
-- **Gate 2 approver** — LLM editorial review (quality + AEO rubric) with approve / revise / reject decisions and a bounded revision loop.
-- **Multi-model LLM routing** — Anthropic, OpenAI, Gemini, Groq (plus OpenRouter / Mistral / DeepSeek / Together / Perplexity if keys exist) with round-robin, health tracking, quota suspension and automatic fallback.
-- **Quality 108 scoring**, internal-linking engine, plagiarism detector, persistent Postgres-backed job queue.
-- **Domain steering** — set `CONTENT_DOMAIN` (e.g. `"fintech news"`) and configure topics in `src/config/topics.ts`; every prompt adapts.
+Most AI writing tools give you text and leave the checking to you. Octypo runs the
+whole editorial line on your own server: it picks what is worth writing about,
+writes the article, checks it, and holds anything that fails for a person to review.
+
+## Features
+
+- **Any language.** Set a language and country per site or topic, from the 185
+  ISO 639-1 codes. Articles are written natively, not translated.
+- **Your choice of model.** Use Anthropic, OpenAI, Gemini, Groq, OpenRouter, Mistral,
+  DeepSeek, Together or Perplexity, with automatic fallback between them.
+- **A specialist model per language.** Connect any OpenAI-compatible endpoint, hosted
+  or local, for the languages it writes best.
+- **Quality gates.** Articles are scored and reviewed, numbers are checked against
+  their sources, and duplicates are caught before writing starts.
+- **You stay in control.** Articles wait as drafts by default, and a daily spend limit
+  stops generation before costs run away.
+- **Built to publish.** Includes an admin panel, a REST API, an Astro blog, structured
+  data and IndexNow pings.
+
+## Project status
+
+This is an early public release, and there will be rough edges. The automated tests
+do not call real models, so read your first articles closely before you turn on
+automatic publishing. The [known limitations](#known-limitations) are listed below.
 
 ## Quick start
 
-You need Node 20 or newer, and Docker for the bundled Postgres.
+You need [Node 20 or newer](https://nodejs.org), [Docker](https://www.docker.com) for
+the bundled Postgres, and a key from one model provider.
 
 ```bash
 git clone https://github.com/KBRglobal/octypo-engine-oss.git
 cd octypo-engine-oss
 npm install && npm run build && npm link
+
 cd .. && mkdir my-site && cd my-site
 octypo init        # creates .env and docker-compose.yml
-# add one LLM key to .env
+```
+
+Add your model key to `.env`, for example `ANTHROPIC_API_KEY=...`. Then start it:
+
+```bash
 octypo db          # starts Postgres
 octypo start       # applies migrations and runs the engine
 ```
 
-`octypo doctor` checks the setup. The admin panel is at `http://localhost:3000/admin`.
+Open <http://localhost:3000/admin> and sign in with the `ADMIN_PASSWORD` from `.env`.
+If something does not work, run `octypo doctor`.
+
+## Your first article
+
+Open **Feeds** in the admin panel and add an RSS feed. The engine checks feeds on a
+schedule. To start right away, select **Run a pipeline pass** on the Overview page.
+
+![Adding a feed](docs/images/feeds.webp)
+
+Finished articles wait in **Review**. Set `AUTO_PUBLISH=true` to publish approved
+articles without review.
+
+Model calls cost money. The engine stops for the day at `OCTYPO_DAILY_COST_CAP_USD`,
+which is 5 USD by default. See **Costs** in the admin panel for what you have spent.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[Feeds and documents] --> B[Selection]
+    B -->|worth writing| C[Writers]
+    B -->|duplicate or weak| X[Skipped]
+    C --> D[Editorial review]
+    D -->|needs work| C
+    D -->|approved| E[Drafts or published]
+    E --> F[Your site]
+```
+
+1. **Selection** scores each item for search value and removes duplicates.
+2. **Writers** draft the article using one of eight editorial personas.
+3. **Editorial review** approves it, rejects it, or sends it back for a revision.
+4. **Publishing** adds structured data, then serves it over the API or to your site.
 
 ## Languages
 
-Articles can be written in any ISO 639-1 language. Set the language and country
-per site or per cluster. The default is English (`en`, `US`). The admin panel and
-reports are in English.
+Set the language and country in the admin panel. The default is English (`en`, `US`).
 
-### Connect a model for one language
-
-Articles in a language can be written by a model that specializes in it. Any
-OpenAI-compatible endpoint works, hosted or local:
+To connect a model that specializes in one language, add it to `.env`:
 
 ```sh
 LANGUAGE_ENGINES_JSON='{"ja":{"baseURL":"https://host.example/v1","model":"model-name","apiKeyEnv":"JA_MODEL_KEY"}}'
 JA_MODEL_KEY=your-key
 ```
 
-Each entry is keyed by ISO 639-1 code and takes `baseURL`, `model`, and optionally
-`apiKeyEnv` (the name of the variable holding the key), `maxTokens` and `jsonMode`.
-`octypo doctor` checks the entries.
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `baseURL` | Yes | An OpenAI-compatible endpoint |
+| `model` | Yes | The model name |
+| `apiKeyEnv` | No | The variable that holds the key. Leave it out for a local server |
+| `maxTokens` | No | The output limit, 8192 by default |
+| `jsonMode` | No | Set to `true` if the endpoint supports `response_format` |
 
-A general provider key is still required: it runs the helper steps, and it takes
-over if the language model fails. The spend ceiling does not count these models,
-because their prices are unknown.
+A general provider key is still required. It runs the helper steps, and it takes over
+if the language model fails.
 
-## From source
+## Connect your site
 
-```bash
-git clone https://github.com/KBRglobal/octypo-engine-oss.git
-cd octypo-engine-oss
-npm install
-cp .env.example .env        # set an LLM key
-docker compose up -d db
-npm run db:migrate
-npm run dev
-```
-
-Add a feed and let it run:
-
-```bash
-TOKEN=$(curl -s -X POST localhost:3000/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d "{\"password\": \"$(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2-)\"}" | jq -r .token)
-
-curl -X POST localhost:3000/api/feeds \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"name": "Hacker News", "url": "https://hnrss.org/frontpage", "category": "news"}'
-```
-
-The scheduler fetches feeds every `RSS_INTERVAL_MINUTES`, runs new items through
-Gate 1, queues writing jobs, and Gate 2 publishes approved articles automatically.
-
-## API
-
-| Method | Path                   | Description                                  |
-| ------ | ---------------------- | -------------------------------------------- |
-| GET    | `/health`              | Liveness check                               |
-| GET    | `/api/feeds`           | List RSS feeds                               |
-| POST   | `/api/feeds`           | Add a feed `{name, url, category?, topicId?}` |
-| GET    | `/api/articles`        | Latest published articles                    |
-| GET    | `/api/pipeline/status` | Scheduler state, RSS/job counts, daily quota |
-| POST   | `/api/pipeline/trigger`| Force a pipeline run `{maxItems?}`           |
+- **Use the included blog.** [`blog/`](blog/README.md) is an Astro front end that
+  renders articles from the engine.
+- **Use the API.** [API.md](API.md) documents the endpoints for your own site.
+- **Sync to an Astro site.** [`astro-kit/`](astro-kit/README.md) pulls articles into
+  an existing project.
 
 ## Configuration
 
-| Env var | Default | Purpose |
+Settings live in `.env`. [`.env.example`](.env.example) lists all of them.
+
+| Variable | Default | Purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | — | Postgres connection string (required) |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` / `GROQ_API_KEY` | — | LLM providers (set at least one) |
-| `LANGUAGE_ENGINES_JSON` | — | A specialist model per language (see [Languages](#languages)) |
-| `CONTENT_DOMAIN` | `general news and analysis` | Steers all prompts to your domain |
-| `SITE_URL` | — | Enables IndexNow pings + canonical URLs |
-| `SITE_NAME` | `Octypo` | Brand used in meta titles / schema |
-| `RSS_INTERVAL_MINUTES` | `30` | Scheduler cycle interval |
-| `RSS_GLOBAL_DAILY_LIMIT` | `20` | Max articles per day |
-| `RSS_DAILY_LIMIT_PER_TOPIC` | `5` | Max articles per topic per day |
-| `ENABLE_RSS_SCHEDULER` | `true` | Toggle the scheduler |
-| `ENABLE_GATEKEEPER_PIPELINE` | `true` | Toggle the job queue |
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY` | — | Model providers (set at least one) |
+| `ADMIN_PASSWORD` | Set by `octypo init` | Admin panel password |
+| `CONTENT_DOMAIN` | `general news and analysis` | The subject your site covers |
+| `AUTO_PUBLISH` | `false` in `.env.example` | Publish approved articles without review |
+| `OCTYPO_DAILY_COST_CAP_USD` | `5` | Daily limit on model spend |
+| `LANGUAGE_ENGINES_JSON` | — | A specialist model per language |
+| `RSS_INTERVAL_MINUTES` | `30` | How often feeds are checked |
+| `RSS_GLOBAL_DAILY_LIMIT` | `20` | Maximum articles per day |
+| `SITE_URL` | — | Enables IndexNow pings and canonical URLs |
 
-Topics (used for tagging, internal links and keyword steering) live in
-`src/config/topics.ts`. Hero/body images are off by default (`NullImageProvider`);
-plug in your own provider via `setImageProvider()` in `src/lib/image-provider.ts`.
+Topics live in `src/config/topics.ts` or in `TOPICS_JSON`. Hero images need an OpenAI
+key and a Cloudflare R2 bucket. Without them, articles publish without images.
+
+## Known limitations
+
+- The admin panel and reports are in English only.
+- Most word-list checks exist only for English. Other languages skip them, so a problem
+  those checks would catch can get through. [Help add a language](CONTRIBUTING.md#adding-language-support).
+- Right-to-left styling in the blog is not complete.
+- Spend on language models from `LANGUAGE_ENGINES_JSON` is not counted toward the daily
+  limit, because their prices are unknown.
+
+## Contributing
+
+Contributions are welcome, especially from native speakers. See
+[CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). To
+report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE)

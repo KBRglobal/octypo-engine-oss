@@ -9,7 +9,7 @@ by tag when the engine publishes.
 
 ## Why SSR plus an edge cache, not a static build
 
-A Scale tenant publishes 300 articles a month — 3,600 in year one, roughly ten
+A busy site publishes 300 articles a month — 3,600 in year one, roughly ten
 publishes a day. With a static build every publish triggers a rebuild whose duration
 grows with the corpus, and a failed build silently freezes the customer's site at
 exactly the moment they are paying the most. With SSR plus cache-tag purging, a

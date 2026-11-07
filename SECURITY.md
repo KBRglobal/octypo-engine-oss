@@ -1,8 +1,15 @@
 # Security
 
-Please report vulnerabilities privately through GitHub's "Report a vulnerability"
-button on this repository, not in a public issue. Include the steps to reproduce
-and the affected version.
+## Reporting a vulnerability
 
-Keep `.env` out of version control, and set a strong `ADMIN_PASSWORD` before
-exposing the admin panel to a network.
+Please report vulnerabilities through the
+[private report form](https://github.com/KBRglobal/octypo-engine-oss/security/advisories/new),
+not in a public issue. Include the steps to reproduce and the affected version.
+
+Fixes are made on the latest release.
+
+## Running Octypo safely
+
+- Keep `.env` out of version control.
+- Set a strong `ADMIN_PASSWORD` before exposing the admin panel to a network.
+- Set `OCTYPO_DAILY_COST_CAP_USD` to limit daily model spend.
