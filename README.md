@@ -3,6 +3,10 @@
 **A self-hosted engine that turns feeds and your own documents into fact-checked
 articles, in any language.**
 
+```bash
+npm install -g octypo
+```
+
 [![CI](https://github.com/KBRglobal/octypo-engine-oss/actions/workflows/ci.yml/badge.svg)](https://github.com/KBRglobal/octypo-engine-oss/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node 20+](https://img.shields.io/badge/node-20%2B-brightgreen.svg)](https://nodejs.org)
@@ -40,11 +44,8 @@ You need [Node 20 or newer](https://nodejs.org), [Docker](https://www.docker.com
 the bundled Postgres, and a key from one model provider.
 
 ```bash
-git clone https://github.com/KBRglobal/octypo-engine-oss.git
-cd octypo-engine-oss
-npm install && npm run build && npm link
-
-cd .. && mkdir my-site && cd my-site
+npm install -g octypo
+mkdir my-site && cd my-site
 octypo init        # creates .env and docker-compose.yml
 ```
 
