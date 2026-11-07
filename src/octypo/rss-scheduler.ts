@@ -294,6 +294,13 @@ export async function forceTrigger(maxItems: number = 10): Promise<{
     return { created: 0, topics: [], globalRemaining: 0 };
   }
 
+  // A manual pass must see feeds added since the last scheduled cycle.
+  try {
+    await rssReader.fetchAllFeeds();
+  } catch (err) {
+    log.error("[RSSScheduler] Feed fetch failed, continuing with existing items:", err);
+  }
+
   const orchestrator = getGatekeeperOrchestrator();
   const stats = await orchestrator.runPipeline(maxItems, globalRemaining);
 
