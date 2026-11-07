@@ -26,6 +26,8 @@
   "files": [
     "bin",
     "dist",
+    "!dist/**/*.test.js",
+    "!dist/**/__fixtures__",
     "dist-admin",
     "drizzle",
     "build-info.json",
