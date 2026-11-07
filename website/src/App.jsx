@@ -156,7 +156,10 @@ function App() {
             <a className="text-link" href="#how">See the newsroom <ArrowDown size={18} /></a>
           </div>
           <div className="hero-open-source">
-            <a href="#open-source">Free and open source</a>
+            <div>
+              <strong>Open source</strong>
+              <span>Free for anyone to run. <a href={REPO_URL} target="_blank" rel="noopener noreferrer">View on GitHub</a></span>
+            </div>
             <InstallCommand />
           </div>
         </div>
