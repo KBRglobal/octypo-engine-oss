@@ -1,6 +1,6 @@
 {
   "name": "octypo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Autonomous content engine: turns feeds into source-checked articles in any language.",
   "type": "module",
   "license": "MIT",
