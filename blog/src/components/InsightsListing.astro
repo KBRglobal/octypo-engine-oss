@@ -1,0 +1,107 @@
+---
+import CardImage from './CardImage.astro';
+import type { ArticleSummary } from '../lib/engine-client';
+
+interface Props {
+  articles: ArticleSummary[];
+  total: number;
+  currentPage: number;
+  pageSize: number;
+  prefix: string;
+  resizePrefix: string | null;
+  publicationTimeZone: string;
+}
+
+const { articles, total, currentPage, pageSize, prefix, resizePrefix, publicationTimeZone } = Astro.props;
+const totalPages = Math.max(1, Math.ceil(total / pageSize));
+const featured = currentPage === 1 ? articles[0] : undefined;
+const gridArticles = featured ? articles.slice(1) : articles;
+const pageStart = (currentPage - 1) * pageSize;
+const articleNumber = (index: number, featuredOffset = 0) =>
+  String(pageStart + index + featuredOffset + 1).padStart(2, '0');
+const pageHref = (page: number) => (page === 1 ? prefix : `${prefix}/page/${page}`);
+const imageFor = (article: ArticleSummary) => article.cardImage || article.heroImage;
+const altFor = (article: ArticleSummary) => article.cardImageAlt || article.heroImageAlt;
+const categoryFor = (article: ArticleSummary) => article.category || article.tags[0] || 'Guide';
+const dateFor = (article: ArticleSummary) => article.publishedAt
+  ? new Date(article.publishedAt).toLocaleDateString('en', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      timeZone: publicationTimeZone,
+    })
+  : null;
+---
+
+<section class="octypo-index-list octypo-width" aria-labelledby="latest-heading">
+  <div class="octypo-section-label">
+    <p id="latest-heading">{currentPage === 1 ? 'Latest articles' : `Archive · Page ${currentPage}`}</p>
+  </div>
+
+  {featured && (
+    <article class="octypo-featured-card">
+      <a href={`${prefix}/${featured.slug}`}>
+        {imageFor(featured) && (
+          <span class="octypo-featured-media">
+            <CardImage
+              src={imageFor(featured)}
+              alt={altFor(featured)}
+              resizePrefix={resizePrefix}
+              sizes="(max-width: 768px) calc(100vw - 2rem), (max-width: 1200px) 56vw, 800px"
+              priority={true}
+            />
+          </span>
+        )}
+        <span class="octypo-featured-copy">
+          <span class="octypo-card-meta-row">
+            <span class="octypo-card-number">01</span>
+            <span class="octypo-card-meta">{categoryFor(featured)}{dateFor(featured) ? ` · ${dateFor(featured)}` : ''}</span>
+          </span>
+          <strong>{featured.title}</strong>
+          {featured.summary && <span class="octypo-card-summary">{featured.summary}</span>}
+          <span class="octypo-card-read">Read the article <span aria-hidden="true">↗</span></span>
+        </span>
+      </a>
+    </article>
+  )}
+
+  {gridArticles.length > 0 && (
+    <ol class="octypo-insights-grid" start={pageStart + (featured ? 2 : 1)}>
+      {gridArticles.map((article, index) => (
+        <li class="octypo-insight-card">
+          <a href={`${prefix}/${article.slug}`}>
+            {imageFor(article) && (
+              <span class="octypo-card-media">
+                <CardImage
+                  src={imageFor(article)}
+                  alt={altFor(article)}
+                  resizePrefix={resizePrefix}
+                  sizes="(max-width: 768px) calc(100vw - 2rem), (max-width: 1100px) 48vw, 30vw"
+                />
+              </span>
+            )}
+            <span class="octypo-card-meta-row">
+              <span class="octypo-card-number">{articleNumber(index, featured ? 1 : 0)}</span>
+              <span class="octypo-card-meta">{categoryFor(article)}{dateFor(article) ? ` · ${dateFor(article)}` : ''}</span>
+            </span>
+            <strong>{article.title}</strong>
+            {article.summary && <span class="octypo-card-summary">{article.summary}</span>}
+            <span class="octypo-card-arrow" aria-hidden="true">↗</span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  )}
+
+  {articles.length === 0 && (
+    <p class="octypo-meta">The first article is scheduled and will appear here after publication.</p>
+  )}
+
+  {totalPages > 1 && (
+    <nav class="octypo-pagination" aria-label="Insights pages">
+      {currentPage > 1 ? <a rel="prev" href={pageHref(currentPage - 1)}>← Previous</a> : <span />}
+      <span>Page {currentPage} of {totalPages}</span>
+      {currentPage < totalPages ? <a rel="next" href={pageHref(currentPage + 1)}>Next →</a> : <span />}
+    </nav>
+  )}
+</section>

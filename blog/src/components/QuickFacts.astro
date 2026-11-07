@@ -1,0 +1,23 @@
+---
+import { quickFactRows, type QuickFactsShape } from '../lib/quick-facts';
+
+interface Props {
+  quickFacts: QuickFactsShape | null | undefined;
+}
+
+const rows = quickFactRows(Astro.props.quickFacts);
+---
+{
+  rows.length > 0 && (
+    <aside class="octypo-quickfacts" aria-label="Quick facts">
+      <dl>
+        {rows.map(row => (
+          <>
+            <dt>{row.label}</dt>
+            <dd>{row.value}</dd>
+          </>
+        ))}
+      </dl>
+    </aside>
+  )
+}

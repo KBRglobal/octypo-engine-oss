@@ -1,0 +1,20 @@
+---
+import { renderBlocks, type Block, type RenderContext } from '../lib/blocks';
+
+interface Props {
+  blocks: Block[] | null | undefined;
+  ctx: RenderContext;
+}
+
+const { blocks, ctx } = Astro.props;
+
+// Rendering lives in lib/blocks.ts rather than in six .astro components. The
+// guarantee that matters — an unknown block type degrades to its content rather
+// than disappearing (mirroring admin/src/lib/blocks.ts:152-163) — is only worth
+// anything if it is unit-tested against a fixture of every type the engine and
+// the editor can write. That test cannot exist if the switch lives in template
+// markup. The HTML is re-sanitised inside renderBlocks, so `set:html` here is
+// not trusting the engine.
+const html = renderBlocks(blocks, ctx);
+---
+<div class="octypo-body" set:html={html} />

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  // `src/lib` is the whole of the blog's logic and depends on nothing but zod,
+  // so it type-checks from the repo root with no Astro install. The .astro
+  // layer, the routes and the cron Worker need `npm install` inside blog/ and
+  // are checked by `npm --prefix blog run check` (astro check + tsc).
+  "include": ["src/lib/**/*.ts"],
+  "exclude": ["node_modules", "dist", ".astro", "src/lib/**/*.test.ts"]
+}

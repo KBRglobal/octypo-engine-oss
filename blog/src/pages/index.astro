@@ -1,0 +1,45 @@
+---
+import Base from '../layouts/Base.astro';
+import InsightsListing from '../components/InsightsListing.astro';
+import { buildPageSeo } from '../lib/seo';
+import { normalisePrefix } from '../lib/rewrite-links';
+
+const { tenant, engine, config } = Astro.locals;
+
+const pageSize = 12;
+const page = await engine.listPublications({ limit: pageSize, offset: 0 });
+const articles = page.items;
+
+const prefix = normalisePrefix(tenant.articlePathPrefix);
+const seo = buildPageSeo(
+  {
+    title: `Insights | ${tenant.siteName}`,
+    description: `Practical answers and guides from ${tenant.siteName}.`,
+    pathname: Astro.url.pathname,
+    ogImage: articles[0]?.cardImage || articles[0]?.heroImage || null,
+    ogImageAlt: articles[0]?.cardImageAlt || articles[0]?.heroImageAlt || null,
+  },
+  tenant,
+  { imageResizePrefix: config.imageResizePrefix }
+);
+---
+<Base seo={seo}>
+  <header class="octypo-index-hero octypo-width">
+    <p class="octypo-eyebrow">{tenant.siteName}</p>
+    <h1>Useful answers, plainly written.</h1>
+    <div class="octypo-index-intro octypo-grid">
+      <p>{page.total} published {page.total === 1 ? 'article' : 'articles'}</p>
+      <p>Direct answers first, evidence throughout, and no filler written for a machine.</p>
+    </div>
+  </header>
+
+  <InsightsListing
+    articles={articles}
+    total={page.total}
+    currentPage={1}
+    pageSize={pageSize}
+    prefix={prefix}
+    resizePrefix={config.imageResizePrefix}
+    publicationTimeZone={config.publicationTimeZone}
+  />
+</Base>

@@ -1,0 +1,33 @@
+---
+import { resizedImageUrl, buildSrcset, HERO_INTRINSIC } from '../lib/images';
+
+interface Props {
+  src: string | null | undefined;
+  alt: string | null | undefined;
+  resizePrefix: string | null;
+}
+
+const { src, alt, resizePrefix } = Astro.props;
+
+// The engine stores a web-optimised 1536x1024 WebP. Installations that also
+// configure an image resizing prefix receive responsive variants; every image
+// still gets intrinsic dimensions so CLS stays at zero.
+const widths = [640, 960, 1280, 1600];
+const url = resizedImageUrl(src, { width: 1280, prefix: resizePrefix });
+const srcset = buildSrcset(src, widths, resizePrefix);
+---
+{
+  url && (
+    <img
+      class="octypo-hero"
+      src={url}
+      srcset={srcset || undefined}
+      sizes="(max-width: 768px) 100vw, 768px"
+      alt={alt ?? ''}
+      width={HERO_INTRINSIC.width}
+      height={HERO_INTRINSIC.height}
+      fetchpriority="high"
+      decoding="async"
+    />
+  )
+}

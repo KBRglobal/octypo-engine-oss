@@ -1,0 +1,29 @@
+{
+  "name": "@octypo/blog",
+  "version": "0.1.0",
+  "description": "The Octypo blog — a zero-JS Astro front end that renders content pulled from the Octypo engine.",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && cp .assetsignore dist/.assetsignore",
+    "preview": "wrangler dev ./dist/_worker.js/index.js",
+    "check": "astro check && tsc --noEmit",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.4.6",
+    "astro": "^7.4.7",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@cloudflare/workers-types": "^5.20260820.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.28.0"
+  }
+}

@@ -1,0 +1,48 @@
+name = "octypo-blog"
+main = "@astrojs/cloudflare/entrypoints/server"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+# Secrets are set with `wrangler secret put`, never in this file and never as a
+# PUBLIC_* variable: anything Astro sees as PUBLIC_* is compiled into the client
+# bundle.
+#   OCTYPO_SITE_KEY
+#   OCTYPO_PURGE_SECRET
+#   CLOUDFLARE_PURGE_TOKEN
+
+[vars]
+# Per-install value: each customer gets their own engine deployment. Replace
+# this placeholder with your engine's URL before deploying.
+OCTYPO_ENGINE_URL = "https://engine.example.com"
+OCTYPO_IMAGE_RESIZE_PREFIX = "/cdn-cgi/image"
+OCTYPO_TENANT_TTL_SECONDS = "300"
+OCTYPO_HOSTED = "true"
+
+# The reconcile cron is a separate Worker so a bad blog deploy cannot take the
+# freshness safety net down with it.
+[env.reconcile]
+name = "octypo-blog-reconcile"
+main = "./workers/reconcile.ts"
+
+[env.reconcile.triggers]
+crons = ["*/5 * * * *"]
+
+# Repeated deliberately. Wrangler does not inherit top-level [vars] into a named
+# environment, so without this block the reconcile Worker starts with no engine
+# URL, throws on first read, and the throw is swallowed by the caller's
+# Promise.allSettled — the freshness safety net silently never runs.
+[env.reconcile.vars]
+OCTYPO_ENGINE_URL = "https://engine.example.com"
+OCTYPO_IMAGE_RESIZE_PREFIX = "/cdn-cgi/image"
+OCTYPO_TENANT_TTL_SECONDS = "300"
+OCTYPO_HOSTED = "true"
+# Hosts this install serves. One per line, comma separated.
+OCTYPO_TENANT_HOSTS = ""
+
+[[env.reconcile.kv_namespaces]]
+binding = "OCTYPO_STATE"
+id = "replace-with-kv-namespace-id"

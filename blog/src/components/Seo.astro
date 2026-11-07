@@ -1,0 +1,12 @@
+---
+import { renderMetaTags, type SeoModel } from '../lib/seo';
+
+interface Props {
+  seo: SeoModel;
+}
+
+const { seo } = Astro.props;
+const tags = renderMetaTags(seo);
+---
+<Fragment set:html={tags} />
+{seo.jsonLd && <script type="application/ld+json" set:html={seo.jsonLd} />}

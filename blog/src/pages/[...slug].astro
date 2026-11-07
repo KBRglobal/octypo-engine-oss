@@ -1,0 +1,166 @@
+---
+import Base from '../layouts/Base.astro';
+import BlockRenderer from '../components/BlockRenderer.astro';
+import HeroImage from '../components/HeroImage.astro';
+import QuickFacts from '../components/QuickFacts.astro';
+import { buildArticleSeo } from '../lib/seo';
+import { checklistItems } from '../lib/quick-facts';
+import { normalisePrefix } from '../lib/rewrite-links';
+import { slugifyHeading } from '../lib/blocks';
+
+const { tenant, engine, config } = Astro.locals;
+
+// One catch-all route rather than a fixed `/blog/[slug]`, because the article
+// path prefix is a per-tenant field: one customer is at /blog, another at
+// /guides, another at the site root.
+const prefix = normalisePrefix(tenant.articlePathPrefix);
+const pathname = Astro.url.pathname.replace(/\/+$/, '');
+
+if (prefix && !pathname.startsWith(`${prefix}/`)) {
+  return new Response('Not found', { status: 404 });
+}
+
+const slug = pathname.slice(prefix.length + 1);
+if (!slug || slug.includes('/')) {
+  return new Response('Not found', { status: 404 });
+}
+
+const article = await engine.getArticle(slug);
+
+// An unpublished or deleted article must 404, not linger on the customer's
+// domain. The engine serves only published rows here, so null already means
+// "gone" — this is the read side of the soft delete added in src/api/admin.ts.
+if (!article) {
+  return new Response('Not found', {
+    status: 404,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  });
+}
+
+const seo = buildArticleSeo(article, tenant, { imageResizePrefix: config.imageResizePrefix });
+const ctx = {
+  articlePathPrefix: tenant.articlePathPrefix,
+  topicPathPrefix: tenant.topicPathPrefix ?? '/topics',
+  imageResizePrefix: config.imageResizePrefix,
+};
+const checklist = checklistItems(article.quickFacts as never);
+const topicPrefix = normalisePrefix(tenant.topicPathPrefix ?? '/topics') || '/topics';
+const readingMinutes = article.wordCount ? Math.max(1, Math.round(article.wordCount / 200)) : null;
+const primaryTopic = article.tags?.[0] || article.category || tenant.siteName;
+const hasFaqBlock = article.blocks.some(block => block.type === 'faq');
+const headings = article.blocks
+  .filter(block => block.type === 'heading')
+  .map(block => {
+    const text = String(block.data?.text ?? block.data?.content ?? '').trim();
+    const level = Math.min(4, Math.max(2, Number(block.data?.level) || 2));
+    return { text, level, id: slugifyHeading(text) };
+  })
+  .filter(heading => heading.text && heading.id)
+  .slice(0, 12);
+---
+<Base seo={seo}>
+  <a class="octypo-skip-link" href="#article-content">Skip to article</a>
+
+  <article class="octypo-article">
+    <nav class="octypo-breadcrumb octypo-width" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li><a href={prefix || '/'}>Insights</a></li>
+        <li aria-current="page">{article.title}</li>
+      </ol>
+    </nav>
+
+    <header class="octypo-article-header octypo-grid octypo-width">
+      <div class="octypo-article-title">
+        <p class="octypo-eyebrow">{primaryTopic}</p>
+        <h1>{article.title}</h1>
+      </div>
+
+      <dl class="octypo-article-meta" aria-label="Article details">
+        {article.publishedAt && (
+          <div>
+            <dt>Published</dt>
+            <dd>
+              <time datetime={article.publishedAt}>
+                {new Date(article.publishedAt).toLocaleDateString(tenant.locale ?? 'en', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  timeZone: config.publicationTimeZone,
+                })}
+              </time>
+            </dd>
+          </div>
+        )}
+        {readingMinutes && <div><dt>Reading time</dt><dd>{readingMinutes} min</dd></div>}
+      </dl>
+    </header>
+
+    {article.heroImage && (
+      <figure class="octypo-hero-wrap octypo-width">
+        <HeroImage src={article.heroImage} alt={article.heroImageAlt} resizePrefix={config.imageResizePrefix} />
+        <figcaption>{article.heroImageAlt}</figcaption>
+      </figure>
+    )}
+
+    <div class="octypo-article-layout octypo-grid octypo-width">
+      <aside class="octypo-contents" aria-label="On this page">
+        <details open>
+          <summary>On this page</summary>
+          {headings.length > 0 ? (
+            <ol>
+              {headings.map((heading, index) => (
+                <li class:list={{ 'is-subheading': heading.level > 2 }}>
+                  <a href={`#${heading.id}`}>
+                    <span>{String(index + 1).padStart(2, '0')}</span>
+                    {heading.text}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          ) : <p>Article sections appear here.</p>}
+        </details>
+      </aside>
+
+      <div id="article-content" class="octypo-article-content">
+        {article.answerCapsule && (
+          <section class="octypo-answer" aria-labelledby="direct-answer-label">
+            <p id="direct-answer-label" class="octypo-answer-label">Direct answer</p>
+            <p class="octypo-capsule">{article.answerCapsule}</p>
+          </section>
+        )}
+
+        <QuickFacts quickFacts={article.quickFacts as never} />
+        <BlockRenderer blocks={article.blocks} ctx={ctx} />
+
+        {!hasFaqBlock && article.faq && article.faq.length > 0 && (
+          <section class="octypo-block octypo-faq" aria-labelledby="faq-title">
+            <h2 id="faq-title" class="octypo-faq-title">Frequently asked questions</h2>
+            {article.faq.map(item => (
+              <div class="octypo-faq-item">
+                <h3 class="octypo-faq-q">{item.question}</h3>
+                <p class="octypo-faq-a">{item.answer}</p>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {checklist.length > 0 && (
+          <section class="octypo-quickfacts octypo-checklist">
+            <h2>Action checklist</h2>
+            <ul>{checklist.map(item => <li>{item}</li>)}</ul>
+          </section>
+        )}
+
+        {article.tags.length > 0 && (
+          <nav class="octypo-topics" aria-label="Article topics">
+            <p>Explore the topic</p>
+            <ul class="octypo-tag-list">
+              {article.tags.map(tag => <li><a href={`${topicPrefix}/${tag}`}>{tag}</a></li>)}
+            </ul>
+          </nav>
+        )}
+      </div>
+    </div>
+  </article>
+</Base>

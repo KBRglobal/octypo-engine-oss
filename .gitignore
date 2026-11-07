@@ -1,0 +1,21 @@
+node_modules/
+dist/
+dist-admin/
+.env
+*.db
+*.log
+.DS_Store
+
+# Playwright MCP session dumps
+.playwright-mcp/
+.claude/
+install-*.env
+# Deploy-time artifact (scripts/write-build-info.mjs), not source
+build-info.json
+.fleet-monitor-state/
+.orphaned-work/
+
+data/
+.env.*
+!.env.example
+.dev.vars

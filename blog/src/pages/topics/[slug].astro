@@ -1,0 +1,66 @@
+---
+import Base from '../../layouts/Base.astro';
+import { buildPageSeo } from '../../lib/seo';
+import { normalisePrefix } from '../../lib/rewrite-links';
+
+const { tenant, engine, config } = Astro.locals;
+const { slug } = Astro.params;
+
+// These pages are not optional. The engine's internal-linking engine writes 5-8
+// `<a href="/topics/<slug>">` links into the body of every article
+// (src/ai/internal-linking-engine.ts:350). Without hub pages a Scale tenant
+// ships thousands of dead internal links and nothing reports it.
+const topic = slug ? await engine.getTopic(slug) : null;
+if (!topic) {
+  return new Response('Not found', {
+    status: 404,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  });
+}
+
+const prefix = normalisePrefix(tenant.articlePathPrefix);
+const name = (topic.topic.name ?? topic.topic.slug)
+  .replace(/[-_]+/g, ' ')
+  .replace(/\b\w/g, character => character.toUpperCase());
+const seo = buildPageSeo(
+  {
+    title: `${name} — ${tenant.siteName}`,
+    description: `Explore ${tenant.siteName} articles about ${name}, with direct answers, practical comparisons, implementation guidance, and measurable next steps.`,
+    pathname: Astro.url.pathname,
+    ogImage: topic.items[0]?.cardImage || topic.items[0]?.heroImage || null,
+    ogImageAlt: topic.items[0]?.cardImageAlt || topic.items[0]?.heroImageAlt || null,
+  },
+  tenant,
+  { imageResizePrefix: config.imageResizePrefix }
+);
+---
+<Base seo={seo}>
+  <header class="octypo-index-hero octypo-width">
+    <nav class="octypo-breadcrumb" aria-label="Breadcrumb">
+      <ol><li><a href="/">Home</a></li><li><a href={prefix || '/'}>Insights</a></li><li aria-current="page">{name}</li></ol>
+    </nav>
+    <p class="octypo-eyebrow">Topic</p>
+    <h1>{name}</h1>
+    <div class="octypo-index-intro octypo-grid">
+      <p>{topic.items.length} {topic.items.length === 1 ? 'article' : 'articles'}</p>
+      <p>Focused answers and practical guidance from {tenant.siteName}.</p>
+    </div>
+  </header>
+  <section class="octypo-index-list octypo-width">
+    <ol class="octypo-card-list">
+      {topic.items.map((article, index) => (
+        <li class="octypo-card">
+          <a href={`${prefix}/${article.slug}`}>
+            <span class="octypo-card-number">{String(index + 1).padStart(2, '0')}</span>
+            <span class="octypo-card-copy">
+              <strong>{article.title}</strong>
+              {article.summary && <span class="octypo-card-summary">{article.summary}</span>}
+            </span>
+            <span class="octypo-card-arrow" aria-hidden="true">↗</span>
+          </a>
+        </li>
+      ))}
+    </ol>
+    {topic.items.length === 0 && <p class="octypo-meta">Nothing has been published under this topic yet.</p>}
+  </section>
+</Base>

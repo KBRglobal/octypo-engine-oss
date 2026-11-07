@@ -1,0 +1,1 @@
+ALTER TABLE "content_ideas" ADD COLUMN "target_words" integer;

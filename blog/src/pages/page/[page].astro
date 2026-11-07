@@ -1,0 +1,60 @@
+---
+import Base from '../../layouts/Base.astro';
+import InsightsListing from '../../components/InsightsListing.astro';
+import { buildPageSeo } from '../../lib/seo';
+import { normalisePrefix } from '../../lib/rewrite-links';
+
+const { tenant, engine, config } = Astro.locals;
+const prefix = normalisePrefix(tenant.articlePathPrefix);
+const currentPage = Number(Astro.params.page);
+
+if (!Number.isInteger(currentPage) || currentPage < 1) {
+  return new Response('Not found', { status: 404 });
+}
+if (currentPage === 1) {
+  return Astro.redirect(prefix || '/', 301);
+}
+
+const pageSize = 12;
+const page = await engine.listPublications({
+  limit: pageSize,
+  offset: (currentPage - 1) * pageSize,
+});
+const totalPages = Math.max(1, Math.ceil(page.total / pageSize));
+
+if (currentPage > totalPages || page.items.length === 0) {
+  return new Response('Not found', { status: 404 });
+}
+
+const seo = buildPageSeo(
+  {
+    title: `Insights — Page ${currentPage} | ${tenant.siteName}`,
+    description: `Practical answers from ${tenant.siteName}, page ${currentPage}.`,
+    pathname: Astro.url.pathname,
+    ogImage: page.items[0]?.cardImage || page.items[0]?.heroImage || null,
+    ogImageAlt: page.items[0]?.cardImageAlt || page.items[0]?.heroImageAlt || null,
+  },
+  tenant,
+  { imageResizePrefix: config.imageResizePrefix }
+);
+---
+
+<Base seo={seo}>
+  <header class="octypo-index-hero is-paged octypo-width">
+    <nav class="octypo-breadcrumb" aria-label="Breadcrumb">
+      <ol><li><a href="/">Home</a></li><li><a href={prefix}>Insights</a></li><li aria-current="page">Page {currentPage}</li></ol>
+    </nav>
+    <p class="octypo-eyebrow">{tenant.siteName}</p>
+    <h1>Insights, page {currentPage}.</h1>
+  </header>
+
+  <InsightsListing
+    articles={page.items}
+    total={page.total}
+    currentPage={currentPage}
+    pageSize={pageSize}
+    prefix={prefix}
+    resizePrefix={config.imageResizePrefix}
+    publicationTimeZone={config.publicationTimeZone}
+  />
+</Base>

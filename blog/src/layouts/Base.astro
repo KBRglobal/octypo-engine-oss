@@ -1,0 +1,61 @@
+---
+import Seo from '../components/Seo.astro';
+import { renderThemeStyle } from '../lib/theme';
+import { textDirection } from '../lib/text-direction';
+import type { SeoModel } from '../lib/seo';
+import '../styles/theme.css';
+
+interface Props {
+  seo: SeoModel;
+}
+
+const { seo } = Astro.props;
+const tenant = Astro.locals.tenant;
+
+const themeStyle = renderThemeStyle(tenant.brand);
+const home = (tenant.articlePathPrefix || '/').replace(/\/+$/, '') || '/';
+const topicHome = (tenant.topicPathPrefix || `${home}/topics`).replace(/\/+$/, '');
+
+const direction = textDirection(tenant.locale ?? 'en');
+---
+<html lang={tenant.locale ?? 'en'} dir={direction}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <Seo seo={seo} />
+    <link rel="alternate" type="application/rss+xml" title={tenant.siteName} href={`${home}/rss.xml`} />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <Fragment set:html={themeStyle} />
+  </head>
+  <body>
+    <div class="octypo-shell">
+      <header class="octypo-header-shell">
+        <div class="octypo-header">
+          <a class="octypo-brand" href="/" aria-label={`${tenant.siteName} home`}>
+            {tenant.brand?.logoUrl
+              ? <img src={tenant.brand.logoUrl} alt={tenant.siteName} width="884" height="359" />
+              : <span class="octypo-brand-name">{tenant.siteName}</span>}
+          </a>
+
+          <nav class="octypo-primary-nav" aria-label="Main navigation">
+            <a class="octypo-nav-link" href={home} aria-current="page">Insights</a>
+          </nav>
+        </div>
+      </header>
+
+      <main id="main-content">
+        <slot />
+      </main>
+
+      <footer class="octypo-footer">
+        <div class="octypo-footer-intro">
+          <p class="octypo-footer-brand">{tenant.siteName}</p>
+        </div>
+        <p class="octypo-footer-copyright">&copy; {new Date().getFullYear()} {tenant.siteName}</p>
+      </footer>
+    </div>
+
+  </body>
+</html>

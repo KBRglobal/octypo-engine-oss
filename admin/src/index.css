@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+/* Octypo Studio theme — ported from the design export (export-html.zip). */
+@theme {
+  /* Light, bright, friendly — the owner works here all day. One file owns the
+     look; every component reads tokens, so this block IS the theme. */
+  --color-background: #F6F8FC;
+  --color-foreground: #111A2C;
+  --color-primary: #FF5B37;
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #EDF2FF;
+  --color-secondary-foreground: #2B59C3;
+  --color-muted: #EEF2F8;
+  --color-muted-foreground: #5D6C84;
+  --color-accent: #E9F0FF;
+  --color-accent-foreground: #2B59C3;
+  --color-destructive: #E5484D;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #111A2C;
+  --color-border: #E2E8F2;
+  --color-input: #FFFFFF;
+  --color-ring: #FF5B37;
+  --color-chart-1: #FF5B37;
+  --color-chart-2: #16A34A;
+  --color-chart-3: #2B59C3;
+  --color-chart-4: #4C84FF;
+  --color-chart-5: #8B5CF6;
+
+  /* Caution: a state that is allowed but must never be entered unnoticed.
+     Amber, so it reads as "careful" without the alarm of destructive red. */
+  --color-caution: #C2620A;
+
+  /* Back-compat aliases for the pre-redesign pages (Articles, Editor, Feeds, Library). */
+  --color-shell: #F6F8FC;
+  --color-surface: #FFFFFF;
+  --color-panel: #FFFFFF;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-heading: "Barlow Condensed", var(--font-sans);
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* BlockNote: blend the editor into the light surface.
+   No `direction` is forced anywhere — bidi/RTL text flows natively. */
+.bn-editor {
+  background: transparent !important;
+  padding-inline: 0;
+}
+.bn-container {
+  --bn-colors-editor-background: transparent;
+}
+
+/* Thin light scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #C4CEDD transparent;
+}
+
+::selection {
+  background: rgba(255, 91, 55, 0.22);
+}
