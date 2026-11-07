@@ -27,7 +27,7 @@ RSS feeds ──► Gate 1 (LLM selection)──► Writer agents ──► Gate
 You need Node 20 or newer, and Docker for the bundled Postgres.
 
 ```bash
-npm install -g octypo
+npm install -g github:KBRglobal/octypo-engine-oss
 mkdir my-site && cd my-site
 octypo init        # creates .env and docker-compose.yml
 # add one LLM key to .env
@@ -64,8 +64,8 @@ because their prices are unknown.
 ## From source
 
 ```bash
-git clone <this repository>
-cd octypo
+git clone https://github.com/KBRglobal/octypo-engine-oss.git
+cd octypo-engine-oss
 npm install
 cp .env.example .env        # set an LLM key
 docker compose up -d db

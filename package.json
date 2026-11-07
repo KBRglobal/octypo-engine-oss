@@ -4,6 +4,14 @@
   "description": "Autonomous content engine: turns feeds into fact-checked articles in any language.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KBRglobal/octypo-engine-oss.git"
+  },
+  "homepage": "https://github.com/KBRglobal/octypo-engine-oss#readme",
+  "bugs": {
+    "url": "https://github.com/KBRglobal/octypo-engine-oss/issues"
+  },
   "keywords": [
     "content",
     "seo",
