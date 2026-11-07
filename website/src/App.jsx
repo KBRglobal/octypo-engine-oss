@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, Check, Menu, Sparkles, X } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, Copy, Menu, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const faqs = [
@@ -33,6 +33,7 @@ const faqs = [
 ];
 
 const REPO_URL = "https://github.com/KBRglobal/octypo-engine-oss";
+const INSTALL_COMMAND = "npm install -g octypo";
 
 const steps = [
   {
@@ -77,6 +78,29 @@ export function Logo() {
     <a className="logo" href="#top" aria-label="Octypo home">
       <span className="logo-word">Octypo</span>
     </a>
+  );
+}
+
+function InstallCommand() {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(INSTALL_COMMAND);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access can be refused; the command stays selectable by hand.
+    }
+  }
+
+  return (
+    <div className="install-command">
+      <code>{INSTALL_COMMAND}</code>
+      <button type="button" onClick={copy} aria-label={copied ? "Copied" : "Copy install command"}>
+        {copied ? <Check size={16} /> : <Copy size={16} />}
+      </button>
+    </div>
   );
 }
 
@@ -130,6 +154,10 @@ function App() {
           <div className="hero-actions">
             <a className="button button-light" href="#contact">Book a demo <ArrowRight size={18} /></a>
             <a className="text-link" href="#how">See the newsroom <ArrowDown size={18} /></a>
+          </div>
+          <div className="hero-open-source">
+            <a href="#open-source">Free and open source</a>
+            <InstallCommand />
           </div>
         </div>
         <div className="hero-stamp"><span>4,731</span> articles published<br />in the real world</div>
@@ -241,7 +269,7 @@ function App() {
             <p>Run the engine on your own server with your own model keys. You pay only your model provider.</p>
           </div>
           <div className="open-source-actions">
-            <code>npm install -g octypo</code>
+            <InstallCommand />
             <a className="button button-light" href={REPO_URL} target="_blank" rel="noopener noreferrer">View on GitHub <ArrowRight size={18} /></a>
           </div>
         </article>

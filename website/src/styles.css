@@ -199,7 +199,13 @@ img { display: block; width: 100%; }
 .open-source-plan .price-name, .open-source-plan .price-volume { display: block; }
 .open-source-plan p { margin: 18px 0 0; max-width: 520px; color: #bac2d7; line-height: 1.6; }
 .open-source-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; flex: none; }
-.open-source-actions code { padding: 14px 18px; border: 1px solid rgba(255,255,255,.2); border-radius: 12px; font: 500 16px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; user-select: all; }
+.install-command { display: inline-flex; align-items: center; gap: 6px; min-height: 52px; padding: 4px 4px 4px 18px; border: 1px solid rgba(255,255,255,.28); border-radius: 12px; background: rgba(10,18,38,.72); color: white; }
+.install-command code { font: 500 16px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; user-select: all; white-space: nowrap; }
+.install-command button { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; border-radius: 9px; background: transparent; color: inherit; cursor: pointer; transition: background .2s; }
+.install-command button:hover { background: rgba(255,255,255,.14); }
+.install-command button:focus-visible { outline: 2px solid white; outline-offset: 1px; }
+.hero-open-source { margin-top: 26px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.hero-open-source > a { min-height: 44px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
 
 .manifesto { max-width: 1240px; margin: 0 auto; overflow: hidden; color: white; padding: 56px 0; display: flex; align-items: center; justify-content: space-between; gap: 40px; border-top: 1px solid rgba(255,255,255,.14); border-bottom: 1px solid rgba(255,255,255,.14); }
 .manifesto-word { font: 700 clamp(72px, 11vw, 170px)/.78 "Infra", var(--display); letter-spacing: -.08em; white-space: nowrap; color: rgba(255,255,255,.96); }
@@ -315,8 +321,11 @@ footer .kbr-credit img { width: auto; height: 17px; filter: invert(1); opacity: 
   .pricing-heading { margin-bottom: 58px; }
   .price-card { min-height: 370px; padding: 34px 28px; }
   .open-source-plan { padding: 34px 28px; }
-  .open-source-actions, .open-source-actions code { width: 100%; }
-  .open-source-actions code { box-sizing: border-box; font-size: 14px; }
+  .open-source-actions, .open-source-actions .install-command { width: 100%; box-sizing: border-box; justify-content: space-between; }
+  .install-command code { font-size: 14px; }
+  .hero-open-source { margin-top: 15px; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .hero-content { padding-top: 30svh; }
+  .hero-actions .text-link { display: none; }
   .manifesto-word { font-size: clamp(64px, 22vw, 92px); }
   .contact h2 { font-size: clamp(52px, 15vw, 72px); }
 }
