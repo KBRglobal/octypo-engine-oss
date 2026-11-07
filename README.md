@@ -43,6 +43,24 @@ Articles can be written in any ISO 639-1 language. Set the language and country
 per site or per cluster. The default is English (`en`, `US`). The admin panel and
 reports are in English.
 
+### Connect a model for one language
+
+Articles in a language can be written by a model that specializes in it. Any
+OpenAI-compatible endpoint works, hosted or local:
+
+```sh
+LANGUAGE_ENGINES_JSON='{"ja":{"baseURL":"https://host.example/v1","model":"model-name","apiKeyEnv":"JA_MODEL_KEY"}}'
+JA_MODEL_KEY=your-key
+```
+
+Each entry is keyed by ISO 639-1 code and takes `baseURL`, `model`, and optionally
+`apiKeyEnv` (the name of the variable holding the key), `maxTokens` and `jsonMode`.
+`octypo doctor` checks the entries.
+
+A general provider key is still required: it runs the helper steps, and it takes
+over if the language model fails. The spend ceiling does not count these models,
+because their prices are unknown.
+
 ## From source
 
 ```bash
@@ -88,6 +106,7 @@ Gate 1, queues writing jobs, and Gate 2 publishes approved articles automaticall
 | --- | --- | --- |
 | `DATABASE_URL` | — | Postgres connection string (required) |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` / `GROQ_API_KEY` | — | LLM providers (set at least one) |
+| `LANGUAGE_ENGINES_JSON` | — | A specialist model per language (see [Languages](#languages)) |
 | `CONTENT_DOMAIN` | `general news and analysis` | Steers all prompts to your domain |
 | `SITE_URL` | — | Enables IndexNow pings + canonical URLs |
 | `SITE_NAME` | `Octypo` | Brand used in meta titles / schema |

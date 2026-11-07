@@ -22,7 +22,7 @@ import { deriveQuickFacts, ensureInternalLinks, insertBodyImages, type LinkCandi
 import { topics } from "../config/topics.js";
 import { DEFAULT_LOCALE, resolveLocale, type ClusterLocale } from "../config/locale.js";
 import { packFor, enPack, type LanguagePack } from "../i18n/language-pack.js";
-import { EngineRegistry, generateWithEngine } from "../services/engine-registry.js";
+import { createLanguageWriter } from "../services/engine-registry.js";
 import { serpBriefFor } from "../research/serp-brief.js";
 import { englishSlug, slugStyle } from "./english-slug.js";
 import { todayContextBlock } from "../lib/today.js";
@@ -417,8 +417,8 @@ export async function writeCommercialArticle(idea: {
     ];
   }
 
-  const engine = EngineRegistry.getNextFromQueue();
-  if (!engine) throw new CommercialWriteError("No engine available");
+  const write = createLanguageWriter(locale.language);
+  if (!write) throw new CommercialWriteError("No engine available");
 
   // Length follows the FACTS, not a quota. The judging round proved the
   // failure mode: four facts stretched to 792 words means every fact repeated
@@ -475,7 +475,7 @@ export async function writeCommercialArticle(idea: {
   const todayRider = "\n\n" + todayContextBlock();
   const userPrompt =
     buildInputBlock(input) + qualityRules + serpRider + lengthHint + tableHint + faqRequest + moneyRider + todayRider;
-  const first = await generateWithEngine(engine, systemPrompt, userPrompt);
+  const first = await write(systemPrompt, userPrompt);
   let article = parseCommercialArticle(first);
   if (!article) {
     // A STOP is the prompt honestly refusing an impossible brief (usually the
@@ -490,7 +490,7 @@ export async function writeCommercialArticle(idea: {
     const retryPrompt = wasStop
       ? buildInputBlock(input) + qualityRules + serpRider + tableHint + faqRequest + moneyRider + todayRider
       : userPrompt;
-    article = parseCommercialArticle(await generateWithEngine(engine, systemPrompt, retryPrompt));
+    article = parseCommercialArticle(await write(systemPrompt, retryPrompt));
   }
   if (!article) {
     throw new CommercialWriteError("Writer output did not follow the contract after retry");
@@ -520,7 +520,7 @@ export async function writeCommercialArticle(idea: {
       faqRequest +
       moneyRider;
     const rewritten = parseCommercialArticle(
-      await generateWithEngine(engine, systemPrompt, fixPrompt)
+      await write(systemPrompt, fixPrompt)
     );
     if (rewritten) {
       const recheck = auditSuperlatives(rewritten, input, pack);
@@ -544,7 +544,7 @@ export async function writeCommercialArticle(idea: {
         `internal_links: ${article.internalLinks.join(", ") || "[]"}\n` +
         `facts_used: ${article.factsUsed.join("; ") || "—"}\nsources_used: ${article.sourcesUsed.join("; ") || "—"}`;
       const editPrompt = buildEditorPrompt(serialized, pack);
-      const edited = parseCommercialArticle(await generateWithEngine(engine, systemPrompt, editPrompt));
+      const edited = parseCommercialArticle(await write(systemPrompt, editPrompt));
       if (edited) {
         const editedWords = edited.body.split(/\s+/).length;
         const originalWords = article.body.split(/\s+/).length;
@@ -585,7 +585,7 @@ export async function writeCommercialArticle(idea: {
     );
     const structuralNote = buildStructuralRetryNote(repeatedSpans, superlatives.found, pack);
     const redo = parseCommercialArticle(
-      await generateWithEngine(engine, systemPrompt, userPrompt + structuralNote)
+      await write(systemPrompt, userPrompt + structuralNote)
     );
     if (!redo) break;
     article = redo;
@@ -697,9 +697,7 @@ export async function writeCommercialArticle(idea: {
       if (!faqOverlap.includes(item.question)) continue;
       try {
         const rewritten = (
-          await generateWithEngine(
-            engine,
-            systemPrompt,
+          await write(systemPrompt,
             buildFaqRewritePrompt(item.question, item.answer, pack)
           )
         ).trim();

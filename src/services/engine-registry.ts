@@ -1,5 +1,6 @@
 import { logger } from "../lib/logger.js";
 import { meterEngineCall, spendCeiling } from "../cost/index.js";
+import { parseLanguageEngines } from "./language-engines.js";
 import type { GoogleGenAI } from "@google/genai";
 
 // Lazy-loaded SDK constructors to avoid heavy imports at server startup
@@ -47,7 +48,8 @@ export type ProviderType =
   | "openrouter"
   | "together"
   | "perplexity"
-  | "kimi";
+  | "kimi"
+  | "custom";
 
 export interface EngineConfig {
   id: string;
@@ -57,6 +59,8 @@ export interface EngineConfig {
   apiKey: string;
   baseURL?: string;
   headers?: Record<string, string>;
+  /** Set on an operator-connected endpoint that accepts response_format. */
+  jsonMode?: boolean;
   maxTokens: number;
   weight: number;
   isHealthy: boolean;
@@ -102,6 +106,9 @@ class EngineRegistryClass {
   ];
 
   private fastEngine: EngineConfig | null = null;
+  // Kept out of `engines`: a model chosen for one language must never be handed
+  // an article in another language by the general queue.
+  private readonly languageEngines: Map<string, EngineConfig> = new Map();
 
   initialize(): void {
     if (this.initialized) return;
@@ -118,8 +125,61 @@ class EngineRegistryClass {
     this.loadDeepSeekEngines();
     this.loadTogetherEngines();
     this.loadPerplexityEngines();
+    this.loadLanguageEngines();
 
     this.initialized = true;
+  }
+
+  private loadLanguageEngines(): void {
+    const { specs, problems } = parseLanguageEngines(process.env.LANGUAGE_ENGINES_JSON);
+    for (const problem of problems) {
+      logger.error({ problem }, "[EngineRegistry] Language engine skipped");
+    }
+    for (const spec of specs) {
+      this.languageEngines.set(spec.language, {
+        id: `language-${spec.language}`,
+        name: `${spec.languageName} model`,
+        provider: "custom",
+        model: spec.model,
+        apiKey: spec.apiKey,
+        baseURL: spec.baseURL,
+        jsonMode: spec.jsonMode,
+        maxTokens: spec.maxTokens,
+        weight: 1,
+        isHealthy: true,
+        errorCount: 0,
+        successCount: 0,
+      });
+    }
+  }
+
+  /**
+   * The model connected for this language, or null when none is connected, it
+   * is resting after a failure, or the spend ceiling is reached. A failed
+   * engine is tried again after the cool-off.
+   */
+  getLanguageEngine(language: string, excludeIds: Set<string> = new Set()): EngineConfig | null {
+    this.initialize();
+    if (spendCeiling.isReached()) return null;
+
+    const engine = this.languageEngines.get(language);
+    if (!engine || excludeIds.has(engine.id)) return null;
+
+    if (!engine.isHealthy) {
+      const failedAt = engine.lastErrorAt?.getTime() ?? 0;
+      if (Date.now() - failedAt < EngineRegistryClass.COOL_OFF_MS) return null;
+      engine.isHealthy = true;
+      engine.errorCount = 0;
+    }
+    engine.lastUsed = new Date();
+    return engine;
+  }
+
+  private findEngine(engineId: string): EngineConfig | undefined {
+    return (
+      this.engines.find(e => e.id === engineId) ??
+      [...this.languageEngines.values()].find(e => e.id === engineId)
+    );
   }
 
   private loadAnthropicEngines(): void {
@@ -402,7 +462,7 @@ class EngineRegistryClass {
   }
 
   reportSuccess(engineId: string): void {
-    const engine = this.engines.find(e => e.id === engineId);
+    const engine = this.findEngine(engineId);
     if (engine) {
       engine.successCount++;
       engine.errorCount = Math.max(0, engine.errorCount - 1);
@@ -415,7 +475,7 @@ class EngineRegistryClass {
   }
 
   reportError(engineId: string, error: string): void {
-    const engine = this.engines.find(e => e.id === engineId);
+    const engine = this.findEngine(engineId);
     if (engine) {
       engine.errorCount++;
       engine.lastError = error;
@@ -593,6 +653,7 @@ class EngineRegistryClass {
       together: 0,
       perplexity: 0,
       kimi: 0,
+      custom: 0,
     };
     this.engines.forEach(e => byProvider[e.provider]++);
 
@@ -784,6 +845,7 @@ export async function generateWithEngine(
     case "together":
     case "perplexity":
     case "kimi":
+    case "custom":
       result = await generateWithOpenAI(engine, systemPrompt, userPrompt);
       break;
     case "gemini":
@@ -807,6 +869,43 @@ export async function generateWithEngine(
   });
 
   return result.text;
+}
+
+export type LanguageWrite = (systemPrompt: string, userPrompt: string) => Promise<string>;
+
+/**
+ * One article's writing calls, on the model connected for its language.
+ *
+ * Returns null when no engine is available. If the language model fails, the
+ * article moves to the general queue for the rest of its calls: a specialist
+ * being down should cost quality on one article, not stop publishing.
+ */
+export function createLanguageWriter(language: string): LanguageWrite | null {
+  let engine = EngineRegistry.getLanguageEngine(language) ?? EngineRegistry.getNextFromQueue();
+  if (!engine) return null;
+
+  return async (systemPrompt, userPrompt) => {
+    const current = engine as EngineConfig;
+    if (current.provider !== "custom") {
+      return generateWithEngine(current, systemPrompt, userPrompt);
+    }
+    try {
+      const text = await generateWithEngine(current, systemPrompt, userPrompt);
+      EngineRegistry.reportSuccess(current.id);
+      return text;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      EngineRegistry.reportError(current.id, message);
+      const fallback = EngineRegistry.getNextFromQueue();
+      if (!fallback) throw error;
+      logger.warn(
+        { language, engineId: current.id, fallback: fallback.id },
+        "[EngineRegistry] Language model failed — using the general queue"
+      );
+      engine = fallback;
+      return generateWithEngine(fallback, systemPrompt, userPrompt);
+    }
+  };
 }
 
 async function generateWithAnthropic(
@@ -911,7 +1010,8 @@ async function generateWithOpenAI(
 
   // Add response_format for providers that support it (OpenAI, DeepSeek, Mistral)
   // Helps enforce JSON output format
-  const supportsJsonFormat = ["openai", "deepseek", "mistral"].includes(engine.provider);
+  const supportsJsonFormat =
+    engine.jsonMode === true || ["openai", "deepseek", "mistral"].includes(engine.provider);
 
   const response = await client.chat.completions.create({
     model: engine.model,

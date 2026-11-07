@@ -5,6 +5,8 @@
 
 import { AgentPersona, AgentMessage } from "../types.js";
 import { EngineRegistry, EngineConfig, generateWithEngine } from "../../services/engine-registry.js";
+import { CONTENT_LANGUAGE } from "../../config/domain.js";
+import { languageCodeFor } from "../../config/locale.js";
 
 export abstract class BaseAgent {
   protected persona: AgentPersona;
@@ -46,6 +48,10 @@ export abstract class BaseAgent {
     if (this.usesFastTier()) {
       const fast = EngineRegistry.getFastEngine();
       if (fast && !excludeIds.has(fast.id) && fast.isHealthy) return fast;
+    } else {
+      const language = languageCodeFor(CONTENT_LANGUAGE);
+      const specialist = language && EngineRegistry.getLanguageEngine(language, excludeIds);
+      if (specialist) return specialist;
     }
 
     // Use the new round-robin method that distributes load across ALL matching engines

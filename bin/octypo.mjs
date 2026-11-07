@@ -71,6 +71,19 @@ function db() {
   return 1;
 }
 
+function languageEngineChecks(raw, hasValue) {
+  let entries;
+  try {
+    entries = Object.entries(JSON.parse(raw));
+  } catch {
+    return [["LANGUAGE_ENGINES_JSON is valid JSON", false]];
+  }
+  return entries.map(([language, entry]) => [
+    `Language model for ${language} is complete`,
+    Boolean(entry?.baseURL && entry?.model) && (!entry.apiKeyEnv || hasValue(entry.apiKeyEnv)),
+  ]);
+}
+
 function doctor() {
   const major = Number(process.versions.node.split(".")[0]);
   const envPath = path.join(cwd, ".env");
@@ -84,6 +97,8 @@ function doctor() {
     ["At least one LLM key is set", keys.some(hasValue)],
     ["Engine is built", existsSync(path.join(root, "dist/index.js"))],
   ];
+  const languageEngines = env.match(/^LANGUAGE_ENGINES_JSON=(.+)$/m)?.[1].replace(/^(['"])(.*)\1$/, "$2");
+  if (languageEngines) checks.push(...languageEngineChecks(languageEngines, hasValue));
   for (const [label, ok] of checks) console.log(`${ok ? "ok  " : "FAIL"} ${label}`);
   return checks.every(([, ok]) => ok) ? 0 : 1;
 }

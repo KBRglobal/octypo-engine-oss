@@ -62,6 +62,13 @@ export function languageNameFor(code: unknown): string | null {
   return typeof code === "string" ? (LANGUAGE_NAMES[code] ?? null) : null;
 }
 
+/** The code for a plain name or a code ("Japanese", "ja"), or null when unknown. */
+export function languageCodeFor(value: string): string | null {
+  const wanted = value.trim().toLowerCase();
+  if (languageNameFor(wanted)) return wanted;
+  return Object.keys(LANGUAGE_NAMES).find(c => LANGUAGE_NAMES[c].toLowerCase() === wanted) ?? null;
+}
+
 export const DEFAULT_LOCALE: ClusterLocale = Object.freeze({
   language: "en",
   country: "US",
