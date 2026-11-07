@@ -78,4 +78,16 @@ describe("slug must not name the outlet", () => {
     );
     expect(r.status).toBe("pass");
   });
+
+  it("lets the outlet name through when the article is about the outlet", () => {
+    const r = scoreSlugReadable(
+      {
+        title: "Inside GitHub’s new Git storage architecture",
+        slug: "github-git-storage-architecture",
+        sourceUrls: ["https://github.blog/engineering/storage/"],
+      },
+      config
+    );
+    expect(r.status).toBe("pass");
+  });
 });

@@ -110,7 +110,10 @@ export function scoreSlugReadable(
   const verdict = judgeSlug(input.slug ?? "");
   // "cityherald-example-com" went live as a slug: the source outlet's domain,
   // not the story. A slug never names where the story was read.
-  const outlet = outletWordsIn(verdict.words, input.sourceUrls ?? []);
+  // When the outlet is also the subject ("Inside GitHub's storage", read on
+  // github.blog), the title names it too, and the slug is about the topic.
+  const titleWords = new Set((input.title ?? "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+  const outlet = outletWordsIn(verdict.words, input.sourceUrls ?? []).filter(w => !titleWords.has(w));
   if (verdict.ok && outlet.length > 0) {
     return build(config, {
       id: "slug-readable",
