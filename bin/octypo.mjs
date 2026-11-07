@@ -56,6 +56,17 @@ function init() {
   return 0;
 }
 
+function waitForDatabase(command) {
+  const prefix = command === "docker" ? ["compose"] : [];
+  const args = [...prefix, "exec", "-T", "db", "pg_isready", "-h", "127.0.0.1", "-U", "octypo"];
+  for (let second = 0; second < 60; second++) {
+    if (spawnSync(command, args, { stdio: "ignore", cwd }).status === 0) return 0;
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
+  }
+  console.error("The database did not become ready within 60 seconds.");
+  return 1;
+}
+
 function db() {
   const attempts = [
     ["docker", ["compose", "up", "-d", "db"]],
@@ -64,7 +75,8 @@ function db() {
   for (const [command, args] of attempts) {
     const probe = spawnSync(command, command === "docker" ? ["compose", "version"] : ["version"], { stdio: "ignore" });
     if (probe.status === 0) {
-      return spawnSync(command, args, { stdio: "inherit", cwd }).status ?? 1;
+      const status = spawnSync(command, args, { stdio: "inherit", cwd }).status ?? 1;
+      return status === 0 ? waitForDatabase(command) : status;
     }
   }
   console.error("Docker Compose was not found. Install it, or point DATABASE_URL at your own Postgres.");
